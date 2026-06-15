@@ -331,14 +331,14 @@ void Allocate_Can_Msg(int16_t data1, int16_t data2, int16_t data3, int16_t data4
         xQueueSend(GIMBAL_TO_CHASSIS_THIRD_SEND_QUEUE, &gimbal_to_chassis_third_send_msg, 0); // 向队列中填充内容
         break;
     }
-    case CAN_BIG_YAW_CMD:
+    case CAN_BIG_YAW_CMD:   
     {
         for (int i = 0; i < 4; i++)
         {
             big_yaw_send_msg.data[2 * i] = (data_array[i] >> 8) & 0xFF; // 高8位
             big_yaw_send_msg.data[2 * i + 1] = data_array[i] & 0xFF;    // 低8位
         }
-        xQueueSend(BIG_YAW_DM6006_SEND_QUEUE, &big_yaw_send_msg, 0); // 向队列中填充内容
+        //xQueueSend(BIG_YAW_DM6006_SEND_QUEUE, &big_yaw_send_msg, 0); // 向队列中填充内容
         break;
     }
     case CAN_SMALL_YAW_AND_PITCH_CMD:
@@ -371,14 +371,14 @@ void Allocate_Can_Msg(int16_t data1, int16_t data2, int16_t data3, int16_t data4
         xQueueSend(DIAL_SEND_QUEUE, &dial_send_msg, 0); // 向队列中填充内容
         break;
     }
-    case CAN_BIG_PITCH_CMD:
+    case CAN_BIG_PITCH_CMD: //DM大pitch用定时器发送
     {
         for (int i = 0; i < 4; i++)
         {
             big_pitch_send_msg.data[2 * i] = (data_array[i] >> 8) & 0xFF;
             big_pitch_send_msg.data[2 * i + 1] = data_array[i] & 0xFF;
         }
-        xQueueSend(BIG_PITCH_SEND_QUEUE, &big_pitch_send_msg, 0);
+        xQueueSend(BIG_PITCH_SEND_QUEUE, &big_pitch_send_msg, 0); // 向队列中填充内容
         break;
     }
     case CAN_SMALL_PITCH_CMD:

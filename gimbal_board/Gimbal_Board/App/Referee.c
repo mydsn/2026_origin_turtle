@@ -77,7 +77,7 @@ ext_sentry_info_t Sentry_Info;
 radar_info_t Radar_Info;
 
 /* 0x030X */
-ext_student_interactive_data_t Student_Interactive_Data;
+ext_radar_to_sentry_data_t Radar_To_Sentry_Data;
 ext_robot_command_t Robot_Command;
 ext_client_map_command_t Client_Map_Command;
 
@@ -124,7 +124,7 @@ void Referee_StructInit(void)
 	memset(&Ground_Robot_Position, 0, sizeof(Ground_Robot_Position));
 	memset(&Sentry_Info, 0, sizeof(Sentry_Info));
 	/* 0x030X */
-	memset(&Student_Interactive_Data, 0, sizeof(Student_Interactive_Data));
+	memset(&Radar_To_Sentry_Data, 0, sizeof(Radar_To_Sentry_Data));
 	memset(&Robot_Command, 0, sizeof(Robot_Command));
 	memset(&Client_Map_Command, 0, sizeof(Client_Map_Command));
 }
@@ -297,7 +297,7 @@ void Referee_SolveFifoData(uint8_t *frame)
 		memcpy(&Sentry_Info, frame + index, sizeof(ext_sentry_info_t));
 		break;
 	case STUDENT_INTERACTIVE_DATA_CMD_ID:
-		memcpy(&Student_Interactive_Data, frame + index, sizeof(ext_student_interactive_data_t));
+		memcpy(&Radar_To_Sentry_Data, frame + index, sizeof(ext_radar_to_sentry_data_t));
 		break;
 	case ROBOT_COMMAND_CMD_ID:
 		memcpy(&Robot_Command, frame + index, sizeof(ext_robot_command_t));

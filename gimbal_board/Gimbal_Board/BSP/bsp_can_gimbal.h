@@ -64,6 +64,9 @@ typedef struct
 extern QueueHandle_t CAN1_send_queue; // CAN1消息队列句柄,此队列用于储存CAN1的发送消息
 extern QueueHandle_t CAN2_send_queue; // CAN2消息队列句柄，此队列用于储存CAN2的发送消息
 
+extern CanTxMsgTypeDef big_yaw_send_msg;
+extern CanTxMsgTypeDef big_pitch_send_msg;
+
 void Can_Filter_Init(void);
 void Can_Msg_Init(void);
 void Create_Can_Send_Queues(void);

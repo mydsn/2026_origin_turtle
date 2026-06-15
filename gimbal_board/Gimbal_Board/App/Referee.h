@@ -332,9 +332,15 @@ extern "C"
 		uint16_t data_cmd_id;
 		uint16_t sender_ID;
 		uint16_t receiver_ID;
-		uint8_t enemy_hero_position_data;
-		uint8_t check_defend_fortress; 
-	} ext_student_interactive_data_t;
+
+		//雷达发给哨兵的数据（按顺序）
+		uint8_t defend_fortress;   // 是否要回防入侵我方堡垒的敌人，1堡垒有人，0堡垒没人
+		uint8_t outpost_alive;	   // 是否进攻前哨站，若敌方前哨站存活则置1
+		uint8_t catch_hero;		   // 抓英雄,如果要抓则发送目标区域代号
+		uint8_t catch_engineer;	   // 抓工程,如果要抓则发送目标区域代号,想上中央高地就发1，兑矿无敌发2
+		uint8_t bumpy_exist_enemy; // 1有人0没人，只管我方半场
+		uint8_t enemy_base_flower; // 1基地开花，0基地未开花 
+	} ext_radar_to_sentry_data_t;
 
 	typedef __packed struct // 0x0301 机器人间通信 头结构体
 	{
@@ -519,7 +525,7 @@ extern "C"
 	extern radar_info_t Radar_Info; 
 
 	/* 0x030X */
-	extern ext_student_interactive_data_t Student_Interactive_Data;
+	extern ext_radar_to_sentry_data_t Radar_To_Sentry_Data;
 	extern ext_robot_command_t Robot_Command;
 	extern ext_client_map_command_t Client_Map_Command;
 

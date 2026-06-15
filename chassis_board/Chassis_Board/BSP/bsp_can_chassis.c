@@ -31,6 +31,9 @@
 #define T_MAX 15.0f
 #define P_MIN -12.56637f
 #define P_MAX 12.56637f
+/*********************************导航数据解析参数*******************************************/
+#define NAV_MAX_SPEED 10.0f // 导航最大速度
+#define NAV_MIN_SPEED -10.0f // 导航最小速度
 /***********************************************全局变量********************************/
 CAN_RxHeaderTypeDef rx_header; // debug用，看can接收正不正常
 chassis_rc_ctrl_t chassis_rc_ctrl = {0};
@@ -217,8 +220,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
         {
             int nav_vx_int = (rx_data[1] << 8) | rx_data[0];
             int nav_vy_int = (rx_data[3] << 8) | rx_data[2];
-            nav_ctrl.vx = uint_to_float(nav_vx_int, -NAV_MAX_SPEED, NAV_MAX_SPEED, 12.0f);
-            nav_ctrl.vy = uint_to_float(nav_vy_int, -NAV_MAX_SPEED, NAV_MAX_SPEED, 12.0f);
+            nav_ctrl.vx = uint_to_float(nav_vx_int, NAV_MIN_SPEED, NAV_MAX_SPEED, 12.0f);
+            nav_ctrl.vy = uint_to_float(nav_vy_int, NAV_MIN_SPEED, NAV_MAX_SPEED, 12.0f);
             nav_ctrl.chassis_target_mode = rx_data[4] & 0x03; // chassis_target_mode对应rx_data[4]最低两位,下面的flag以此类推
             nav_ctrl.updownhill_state = (rx_data[4] >> 2) & 0x03;
             nav_ctrl.health_state = (rx_data[4] >> 4) & 0x01;

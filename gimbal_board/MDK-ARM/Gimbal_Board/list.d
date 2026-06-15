@@ -1,0 +1,12 @@
+gimbal_board\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/list.c
+gimbal_board\list.o: D:\MDK-ARM\core\ARM\ARMCC\Bin\..\include\stdlib.h
+gimbal_board\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
+gimbal_board\list.o: D:\MDK-ARM\core\ARM\ARMCC\Bin\..\include\stddef.h
+gimbal_board\list.o: D:\MDK-ARM\core\ARM\ARMCC\Bin\..\include\stdint.h
+gimbal_board\list.o: ../Inc/FreeRTOSConfig.h
+gimbal_board\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
+gimbal_board\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
+gimbal_board\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
+gimbal_board\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/portmacro.h
+gimbal_board\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+gimbal_board\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h

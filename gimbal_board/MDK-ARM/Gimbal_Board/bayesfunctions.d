@@ -1,0 +1,17 @@
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\pack\ARM\CMSIS-DSP\1.16.2\Source\BayesFunctions\BayesFunctions.c
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\pack\ARM\CMSIS-DSP\1.16.2\Source\BayesFunctions\arm_gaussian_naive_bayes_predict_f32.c
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\pack\ARM\CMSIS-DSP\1.16.2\Include\dsp/bayes_functions.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\pack\ARM\CMSIS-DSP\1.16.2\Include\arm_math_types.h
+gimbal_board\bayesfunctions.o: ../Drivers/CMSIS/Include/cmsis_compiler.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\core\ARM\ARMCC\Bin\..\include\stdint.h
+gimbal_board\bayesfunctions.o: ../Drivers/CMSIS/Include/cmsis_armcc.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\core\ARM\ARMCC\Bin\..\include\string.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\core\ARM\ARMCC\Bin\..\include\math.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\core\ARM\ARMCC\Bin\..\include\float.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\core\ARM\ARMCC\Bin\..\include\limits.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\pack\ARM\CMSIS-DSP\1.16.2\Include\arm_math_memory.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\pack\ARM\CMSIS-DSP\1.16.2\Include\dsp/none.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\pack\ARM\CMSIS-DSP\1.16.2\Include\dsp/utils.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\pack\ARM\CMSIS-DSP\1.16.2\Include\dsp/statistics_functions.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\pack\ARM\CMSIS-DSP\1.16.2\Include\dsp/basic_math_functions.h
+gimbal_board\bayesfunctions.o: D:\MDK-ARM\pack\ARM\CMSIS-DSP\1.16.2\Include\dsp/fast_math_functions.h

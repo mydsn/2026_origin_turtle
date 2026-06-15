@@ -30,7 +30,7 @@
 /*************************云台模式枚举体****************************/
 typedef enum
 {
-    NAV_PASS_BUMPY,        // 导航过颠簸路段模式
+    NAV_PASS_TUNNEL,        // 导航过隧道路段模式
     AUTOAIM,               // 自瞄模式
     GIMBAL_REMOTE_CONTROL, // 遥控器控制模式
     NAV_SEEK_ENEMY,        // 导航寻敌模式
@@ -73,6 +73,7 @@ typedef struct
     gimbal_motor_control_mode_t big_yaw_mode;   // 大yaw电机控制模式
     gimbal_motor_control_mode_t small_yaw_mode; // 小yaw电机控制模式
     gimbal_motor_control_mode_t pitch_mode;     // pitch电机控制模式
+    gimbal_motor_control_mode_t big_pitch_mode; // 大pitch电机控制模式
 
     float big_yaw_angle_err;     // 仅用于调试时候观测大yaw角度偏差，不参与云台控制
     float small_yaw_angle_err;   // 仅用于调试时候观测小yaw角度偏差，不参与云台控制
@@ -83,7 +84,7 @@ gimbal_control_t gimbal_control = {
     .gimbal_mode_last = GIMBAL_SAFE};
 /**************************云台控制模式表，在不同的云台模式下设置对应云台控制逻辑***************************/
 // 云台模式处理函数声明，使用函数名给函数指针赋值之前，该函数必须已经被声明
-static void gimbal_nav_pass_bumpy_handler(void);
+static void gimbal_nav_pass_tunnel_handler(void);
 static void gimbal_autoaim_handler(void);
 static void gimbal_remote_control_handler(void);
 static void gimbal_nav_seek_enemy_handler(void);
@@ -91,7 +92,7 @@ static void gimbal_safe_handler(void);
 
 typedef void (*gimbal_handler)(void); // 不同云台模式对应的处理函数
 gimbal_handler gimbal_commands[] = {
-    [NAV_PASS_BUMPY] = gimbal_nav_pass_bumpy_handler,
+    [NAV_PASS_TUNNEL] = gimbal_nav_pass_tunnel_handler,
     [AUTOAIM] = gimbal_autoaim_handler,
     [GIMBAL_REMOTE_CONTROL] = gimbal_remote_control_handler,
     [NAV_SEEK_ENEMY] = gimbal_nav_seek_enemy_handler,
@@ -138,7 +139,7 @@ static void Gimbal_Motor_Control_Init(void)
     const static fp32 pitch_motor_angle_pid[3] = {PITCH_MOTOR_ANGLE_PID_KP, PITCH_MOTOR_ANGLE_PID_KI, PITCH_MOTOR_ANGLE_PID_KD};
     const static fp32 pitch_motor_auto_aim_pid[3] = {PITCH_MOTOR_AUTO_AIM_PID_KP, PITCH_MOTOR_AUTO_AIM_PID_KI, PITCH_MOTOR_AUTO_AIM_PID_KD};
 
-    const static fp32 big_pitch_speed_pid[3] = {BIG_PITCH_SPEED_KP, BIG_PITCH_SPEED_KI, BIG_PITCH_SPEED_KD};
+    const static fp32 big_pitch_motor_speed_pid[3] = {BIG_PITCH_SPEED_KP, BIG_PITCH_SPEED_KI, BIG_PITCH_SPEED_KD};
     const static fp32 big_pitch_nav_angle_pid[3] = {BIG_PITCH_ANGLE_KP, BIG_PITCH_ANGLE_KI, BIG_PITCH_ANGLE_KD};
 
     PID_init(&DM_big_yaw_motor.speed_pid, PID_POSITION, big_yaw_motor_speed_pid, BIG_YAW_MOTOR_SPEED_PID_MAX_OUT, BIG_YAW_MOTOR_SPEED_PID_MAX_IOUT);
@@ -162,7 +163,7 @@ static void Gimbal_Motor_Control_Init(void)
     gimbal_pitch_motor.current_ff = PITCH_MOTOR_CURRENT_FF;
 
     PID_init(&DM_big_pitch_motor.speed_pid, PID_POSITION,
-             big_pitch_speed_pid,
+             big_pitch_motor_speed_pid,
              BIG_PITCH_SPEED_MAX_OUT, BIG_PITCH_SPEED_MAX_IOUT);
     PID_init(&DM_big_pitch_motor.nav_angle_pid, PID_POSITION,
              big_pitch_nav_angle_pid,
@@ -195,12 +196,12 @@ static void Gimbal_Data_Update(void)
     const float lpf_coeff = 0.5f; // 低通滤波系数
     DM_big_yaw_motor.INS_angle_set_last = DM_big_yaw_motor.INS_angle_set;
     DM_big_yaw_motor.INS_speed_set_last = DM_big_yaw_motor.INS_speed_set;
-    DM_big_yaw_motor.INS_speed_now = -INS.Gyro[AXIS_Z] * RAD_TO_DEGREE; // 修改
+    DM_big_yaw_motor.INS_speed_now = INS.Gyro[AXIS_Z] * RAD_TO_DEGREE; // 修改
     // 方向
 //    DM_big_yaw_motor.INS_angle_now = gimbal_small_yaw_motor.INS_angle_now + (SMALL_YAW_MIDDLE_ENC_ZERO * GM6020_ENC_TO_DEGREE - gimbal_small_yaw_motor.ENC_angle_now);
 //    DM_big_yaw_motor.INS_angle_now = gimbal_small_yaw_motor.INS_angle_now + (-SMALL_YAW_MIDDLE_ENC_ZERO * GM6020_ENC_TO_DEGREE - gimbal_small_yaw_motor.ENC_angle_now);
     // debug
-    DM_big_yaw_motor.INS_angle_now = -INS.Yaw;//暂时这样
+    DM_big_yaw_motor.INS_angle_now = INS.Yaw;//暂时这样
     //gimbal_small_yaw_motor.INS_angle_now + (SMALL_YAW_MIDDLE_ENC_ZERO * GM6020_ENC_TO_DEGREE - gimbal_small_yaw_motor.ENC_angle_now);
     DM_big_yaw_motor.vel_filtered = lpf_coeff * DM_big_yaw_motor.vel + (1.0f - lpf_coeff) * DM_big_yaw_motor.vel_last;
     DM_big_yaw_motor.vel_last = DM_big_yaw_motor.vel;
@@ -241,25 +242,20 @@ static void Gimbal_Data_Update(void)
  */
 static gimbal_mode_t Gimbal_Mode_Update()
 {
-    bool_t check_nav_pass_bumpy = ((rc_ctrl.rc.s[1] == RC_SW_UP) && (NUC_Data_Receive.pass_bumpy_mode == 1));
+    bool_t check_nav_pass_tunnel = ((rc_ctrl.rc.s[1] == RC_SW_UP) && (NUC_Data_Receive.pass_tunnel_mode == 1));
     bool_t check_autoaim = (NUC_Data_Receive.small_yaw_aim != 0 || NUC_Data_Receive.pitch_aim != 0); // 是否满足自瞄模式，下面以此类推
     bool_t check_rc_ctrl = (rc_ctrl.rc.s[1] == RC_SW_MID);
     bool_t check_nav_seek_enemy = (rc_ctrl.rc.s[1] == RC_SW_UP);
-    bool_t check_safe =rc_ctrl.rc.s[1] == (RC_SW_DOWN || toe_is_error(DBUS_TOE));
+    bool_t check_safe = (rc_ctrl.rc.s[1] == RC_SW_DOWN || toe_is_error(DBUS_TOE));
 //    ((rc_ctrl.rc.s[1] == RC_SW_DOWN) || toe_is_error(DBUS_TOE) || toe_is_error(DM_IMU_TOE) || toe_is_error(BOARD_ACCEL_TOE) || toe_is_error(BOARD_GYRO_TOE));
-    bool_t check_in_tunnel=0;
 
     if (check_safe)
     {
         return GIMBAL_SAFE; // 失能模式的优先级最高，需要优先判断
     }
-    else if (check_nav_pass_bumpy)
+    else if (check_nav_pass_tunnel)
     {
-        return NAV_PASS_BUMPY;
-    }
-    else if(check_in_tunnel) // 还没想好伸缩怎么处理模式，伸出和缩下是两个模式还是一个？
-    {
-        return 0;
+        return NAV_PASS_TUNNEL;
     }
     else if (check_autoaim)
     {
@@ -429,6 +425,18 @@ void Check_Pitch_Angle_Limit(gimbal_motor_control_mode_t mode)
             gimbal_pitch_motor.INS_speed_set = 0; // 速度模式下一越过电子限位，pitch轴目标速度就设置为0
     }
 }
+
+/**
+ * @description: 检查大pitch当前有无越过电子限位，并反馈状态
+ * @return 无
+ */
+void Check_Big_Pitch_Angle_Limit(void)
+{
+    if ((DM_big_pitch_motor.INS_angle_now < BIG_PITCH_ANGLE_MIN && DM_big_pitch_motor.INS_speed_set < 0) || (DM_big_pitch_motor.INS_angle_now > BIG_PITCH_ANGLE_MAX && DM_big_pitch_motor.INS_speed_set > 0))
+    {
+        DM_big_pitch_motor.target_current = 0.0f;
+    }
+}
 /**
  * @description: 用于计算导航索敌模式下pitch轴上下摆动巡航的目标角度
  * @return pitch目标角度
@@ -530,7 +538,7 @@ static void Calculate_Gimbal_Motor_Target_Current(pid_type_def *gimbal_motor_pid
         DM_big_yaw_motor.target_current += CHASSIS_FRICTION_COMPENSATE_COEFF * DM_big_yaw_motor.vel_filtered;
 //        DM_big_yaw_motor.target_current = limit(DM_big_yaw_motor.target_current,-11.0f,11.0f);
         //debug
-        DM_big_yaw_motor.target_current = limit(DM_big_yaw_motor.target_current,-5.0f,5.0f);
+        DM_big_yaw_motor.target_current = limit(DM_big_yaw_motor.target_current,-11.0f,11.0f);
         break;
     }
     case BIG_PITCH_MOTOR: // 大pitch
@@ -555,7 +563,7 @@ static void Calculate_Gimbal_Motor_Target_Current(pid_type_def *gimbal_motor_pid
         DM_big_pitch_motor.target_current += DM_big_pitch_motor.current_ff * (DM_big_pitch_motor.INS_speed_set - DM_big_pitch_motor.INS_speed_set_last);
 //        DM_big_yaw_motor.target_current = limit(DM_big_yaw_motor.target_current,-11.0f,11.0f);
         //debug
-        DM_big_pitch_motor.target_current = limit(DM_big_pitch_motor.target_current,-5.0f,5.0f);
+        DM_big_pitch_motor.target_current = limit(DM_big_pitch_motor.target_current,-10.0f,10.0f);
         break;
     }
     default:
@@ -619,27 +627,31 @@ static void gimbal_safe_handler(void)
 }
 
 /**
- * @description: 过颠簸路段模式下的控制函数，三个轴电机都是位置控制,小yaw目标位置为上位机发下来的导航角度，大yaw跟随小yaw
+ * @description: 过隧道路段模式下的控制函数，三个轴电机都是位置控制,小yaw目标位置为上位机发下来的导航角度，大yaw跟随小yaw
  * @return 无
  */
-static void gimbal_nav_pass_bumpy_handler(void)
+static void gimbal_nav_pass_tunnel_handler(void)
 {
     gimbal_control.big_yaw_mode = POSITION_ENC, gimbal_control.small_yaw_mode = POSITION_INS, gimbal_control.pitch_mode = POSITION_INS;
 
     gimbal_small_yaw_motor.speed_pid.Kp = SMALL_YAW_MOTOR_NORMAL_SPEED_PID_KP;
     gimbal_small_yaw_motor.speed_pid.Ki = SMALL_YAW_MOTOR_NORMAL_SPEED_PID_KI;
     gimbal_small_yaw_motor.speed_pid.Kd = SMALL_YAW_MOTOR_NORMAL_SPEED_PID_KD;
-    gimbal_small_yaw_motor.INS_angle_set = Find_Yaw_Min_Angle(NUC_Data_Receive.pass_bumpy_yaw_angle, gimbal_small_yaw_motor.INS_angle_now);
+    gimbal_small_yaw_motor.INS_angle_set = Find_Yaw_Min_Angle(NUC_Data_Receive.pass_tunnel_yaw_angle, gimbal_small_yaw_motor.INS_angle_now);
     Calculate_Gimbal_Motor_Target_Current(&gimbal_small_yaw_motor.angle_pid, POSITION_INS, SMALL_YAW_MOTOR, gimbal_small_yaw_motor.INS_angle_now, gimbal_small_yaw_motor.INS_angle_set);
 
 //    fp32 big_yaw_follow_angle = SMALL_YAW_MIDDLE_ENC_ZERO * GM6020_ENC_TO_DEGREE - gimbal_small_yaw_motor.ENC_angle_now;
     // 疑似方向问题
-    fp32 big_yaw_follow_angle = -SMALL_YAW_MIDDLE_ENC_ZERO * GM6020_ENC_TO_DEGREE - gimbal_small_yaw_motor.ENC_angle_now;
+    fp32 big_yaw_follow_angle = Find_Yaw_Min_Angle(NUC_Data_Receive.pass_tunnel_yaw_angle, DM_big_yaw_motor.INS_angle_now);//-SMALL_YAW_MIDDLE_ENC_ZERO * GM6020_ENC_TO_DEGREE - gimbal_small_yaw_motor.ENC_angle_now;
     Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.follow_small_yaw_pid, POSITION_ENC, BIG_YAW_MOTOR, big_yaw_follow_angle, 0);
 
     gimbal_pitch_motor.INS_angle_set = 0.0f;
     Check_Pitch_Angle_Limit(POSITION_INS);
     Calculate_Gimbal_Motor_Target_Current(&gimbal_pitch_motor.angle_pid, POSITION_INS, PITCH_MOTOR, gimbal_pitch_motor.INS_angle_now, gimbal_pitch_motor.INS_angle_set);
+
+    DM_big_pitch_motor.INS_angle_set = BIG_PITCH_FOLD_ANGLE;
+    Calculate_Gimbal_Motor_Target_Current(&DM_big_pitch_motor.nav_angle_pid, POSITION_INS, BIG_PITCH_MOTOR, DM_big_pitch_motor.INS_angle_now, DM_big_pitch_motor.INS_angle_set);
+    Check_Big_Pitch_Angle_Limit();
 
     gimbal_control.small_yaw_angle_err = gimbal_small_yaw_motor.INS_angle_set - gimbal_small_yaw_motor.INS_angle_now;
     gimbal_control.big_yaw_angle_err = big_yaw_follow_angle;
@@ -767,6 +779,11 @@ static void gimbal_nav_seek_enemy_handler(void)
     Check_Pitch_Angle_Limit(POSITION_INS);
     Calculate_Gimbal_Motor_Target_Current(&gimbal_pitch_motor.angle_pid, POSITION_INS, PITCH_MOTOR, gimbal_pitch_motor.INS_angle_now, gimbal_pitch_motor.INS_angle_set);
 
+    //*********大pitch电机控制逻辑********/
+    DM_big_pitch_motor.INS_angle_set = BIG_PITCH_STRETCH_ANGLE;
+    Calculate_Gimbal_Motor_Target_Current(&DM_big_pitch_motor.nav_angle_pid, POSITION_INS, BIG_PITCH_MOTOR, DM_big_pitch_motor.INS_angle_now, DM_big_pitch_motor.INS_angle_set);
+    Check_Big_Pitch_Angle_Limit();
+
     gimbal_control.small_yaw_angle_err = gimbal_small_yaw_motor.ENC_angle_set - gimbal_small_yaw_motor.ENC_angle_now;
     gimbal_control.big_yaw_angle_err = DM_big_yaw_motor.INS_angle_set - DM_big_yaw_motor.INS_angle_now;
     gimbal_control.pitch_angle_err = gimbal_pitch_motor.INS_angle_set - gimbal_pitch_motor.INS_angle_now;
@@ -778,13 +795,15 @@ static void gimbal_nav_seek_enemy_handler(void)
  */
 static void gimbal_remote_control_handler(void)
 {
-    gimbal_motor_control_mode_t small_yaw_mode_last, pitch_mode_last;
+    gimbal_motor_control_mode_t small_yaw_mode_last, pitch_mode_last, big_yaw_mode_last;
     small_yaw_mode_last = gimbal_control.small_yaw_mode;
     pitch_mode_last = gimbal_control.pitch_mode;
+    big_yaw_mode_last = gimbal_control.big_yaw_mode;
 
     gimbal_control.small_yaw_mode = (my_fabsf(rc_ctrl.rc.ch[0]) > 10) ? SPEED : POSITION_INS;
     gimbal_control.pitch_mode = (my_fabsf(rc_ctrl.rc.ch[1]) > 10) ? SPEED : POSITION_INS;
     gimbal_control.big_yaw_mode = POSITION_ENC;
+    gimbal_control.pitch_mode = POSITION_ENC;
 
     /*********小yaw轴电机控制逻辑********/
     //debug
@@ -836,7 +855,15 @@ static void gimbal_remote_control_handler(void)
 //    // fp32 big_yaw_follow_angle = -SMALL_YAW_MIDDLE_ENC_ZERO * GM6020_ENC_TO_DEGREE - gimbal_small_yaw_motor.ENC_angle_now;
 //    // Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.follow_small_yaw_pid, POSITION_ENC, BIG_YAW_MOTOR, big_yaw_follow_angle, 0);
 
-    /*********pitch轴电机控制逻辑********/
+    //*********大pitch电机控制逻辑********/
+    if(rc_ctrl.rc.s[0] == RC_SW_DOWN)
+        DM_big_pitch_motor.INS_angle_set = BIG_PITCH_FOLD_ANGLE;
+    else
+        DM_big_pitch_motor.INS_angle_set = BIG_PITCH_STRETCH_ANGLE;
+    Calculate_Gimbal_Motor_Target_Current(&DM_big_pitch_motor.nav_angle_pid, POSITION_INS, BIG_PITCH_MOTOR, DM_big_pitch_motor.INS_angle_now, DM_big_pitch_motor.INS_angle_set);
+    Check_Big_Pitch_Angle_Limit();
+
+    /*********小pitch电机控制逻辑********/
     if (gimbal_control.pitch_mode == SPEED)
     {
         gimbal_pitch_motor.INS_speed_set = -(float)rc_ctrl.rc.ch[1] / 660.0f * REMOTE_CONTROL_PITCH_MAX_SPEED * RAD_TO_DEGREE;
@@ -889,17 +916,20 @@ void Gimbal_Task(void const *argument)
         gimbal_control.gimbal_mode = Gimbal_Mode_Update();
 
         Call_Gimbal_Mode_Handler(gimbal_control.gimbal_mode);
-        Big_Pitch_Motor_Control();  // 大Pitch电机控制
-        if(cnt %2 ==0)
+        //Big_Pitch_Motor_Control();  // 大Pitch电机控制
+        if(cnt % 2 ==0)
         {
 //      Ctrl_DM_Motor(0, 0, 0, 0, 0);
-        Ctrl_DM_Motor(0, 0, 0, 0, DM_big_yaw_motor.target_current);
+            //
+            Ctrl_DM_BigPitch(0.0f, 0.0f, 0.0f, 0.0f, DM_big_pitch_motor.target_current);
         }
         else
         {
-        Ctrl_DM_BigPitch(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+            //
 //        Ctrl_DM_BigPitch(0.0f, 0.0f, 0.0f, 0.0f, DM_big_pitch_motor.target_current);
         }
+        Ctrl_DM_Motor(0, 0, 0, 0, DM_big_yaw_motor.target_current);
+        
 //      Allocate_Can_Msg(-gimbal_small_yaw_motor.give_current, 0, 0, 0, CAN_SMALL_YAW_AND_PITCH_CMD); //CMD名字先不改了，反馈方向反一下
         Allocate_Can_Msg(0, 0, 0, 0, CAN_SMALL_YAW_AND_PITCH_CMD); //CMD名字先不改了，反馈方向反一下
         vTaskDelay(1);
@@ -907,7 +937,9 @@ void Gimbal_Task(void const *argument)
         Allocate_Can_Msg(LK_MOTOR_TORQUE_CONTROL_CMD_ID, 0, 0, 0, CAN_SMALL_PITCH_CMD);
         //Allocate_Can_Msg(LK_MOTOR_TORQUE_CONTROL_CMD_ID, 0, gimbal_small_yaw_motor.give_current, 0, CAN_SMALL_PITCH_CMD);
 
-//        Vofa_Send_Data2(gimbal_small_yaw_motor.INS_speed_set, gimbal_small_yaw_motor.INS_speed_now);
+        //Vofa_Send_Data4(gimbal_small_yaw_motor.INS_speed_set, gimbal_small_yaw_motor.INS_speed_now, 0, 0);
+        //Vofa_Send_Data4(DM_big_yaw_motor.INS_angle_set, DM_big_yaw_motor.INS_angle_now, DM_big_yaw_motor.INS_speed_set, DM_big_yaw_motor.INS_speed_now);
+        //Vofa_Send_Data4(DM_big_yaw_motor.target_current, DM_big_yaw_motor.toq, DM_big_yaw_motor.INS_speed_set, DM_big_yaw_motor.INS_speed_now);
         cnt == 120 ? cnt = 1 : cnt++; // div等于2,3,4,5的最小公倍数时重置
         vTaskDelay(1);
     }

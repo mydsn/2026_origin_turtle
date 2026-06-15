@@ -15,7 +15,7 @@
 #define PITCH_MOTOR_GRAVITY_STATIC_COMPENSATE (5300) // 用于补偿重力，pitch轴质心与转轴的连线与地面平行时抵消重力所需的力矩，单位是发给6020电机的目标电流
 #define PITCH_CENTROID_OFFSET_ANGLE -55.28313f // 补偿pitch的INS_angle
 /**************************************************PID,前馈系数************************************************************************/
-#define BIG_YAW_MOTOR_SPEED_PID_KP 0.02//0.12f
+#define BIG_YAW_MOTOR_SPEED_PID_KP 0.05f
 #define BIG_YAW_MOTOR_SPEED_PID_KI 0.0002f // 80.0f
 #define BIG_YAW_MOTOR_SPEED_PID_KD 0.0f
 #define BIG_YAW_MOTOR_SPEED_PID_MAX_OUT 11.0f
@@ -24,17 +24,17 @@
 #define BIG_YAW_MOTOR_CURRENT_FF 0.08f //0.02
 #define CHASSIS_FRICTION_COMPENSATE_COEFF 0.12f // 相对于底盘的底盘摩擦补偿// debug
 
-#define BIG_YAW_MOTOR_NAV_ANGLE_PID_KP 25.0f
+#define BIG_YAW_MOTOR_NAV_ANGLE_PID_KP 20.0f
 #define BIG_YAW_MOTOR_NAV_ANGLE_PID_KI 0.002f
-#define BIG_YAW_MOTOR_NAV_ANGLE_PID_KD 12.0f
+#define BIG_YAW_MOTOR_NAV_ANGLE_PID_KD 50.0f
 #define BIG_YAW_MOTOR_NAV_ANGLE_PID_MAX_OUT 150.0f
 #define BIG_YAW_MOTOR_NAV_ANGLE_PID_MAX_IOUT 5.0f
 
-#define BIG_YAW_MOTOR_FOLLOW_SMALL_YAW_PID_KP 5.0f
+#define BIG_YAW_MOTOR_FOLLOW_SMALL_YAW_PID_KP 17.0f
 #define BIG_YAW_MOTOR_FOLLOW_SMALL_YAW_PID_KI 0.002f
-#define BIG_YAW_MOTOR_FOLLOW_SMALL_YAW_PID_KD 2.0f
-#define BIG_YAW_MOTOR_FOLLOW_SMALL_YAW_PID_MAX_OUT 100.0f
-#define BIG_YAW_MOTOR_FOLLOW_SMALL_YAW_PID_MAX_IOUT 0.0f//10.0f
+#define BIG_YAW_MOTOR_FOLLOW_SMALL_YAW_PID_KD 100.0f
+#define BIG_YAW_MOTOR_FOLLOW_SMALL_YAW_PID_MAX_OUT 1200.0f
+#define BIG_YAW_MOTOR_FOLLOW_SMALL_YAW_PID_MAX_IOUT 10.0f
 
 #define BIG_YAW_MOTOR_OMNI_PID_KP 10.0f //全向感知pid
 #define BIG_YAW_MOTOR_OMNI_PID_KI 0.002f
@@ -133,9 +133,10 @@
 #define BIG_PITCH_ANGLE_MAX_OUT   150.0f
 #define BIG_PITCH_ANGLE_MAX_IOUT  0.0f
 
-#define BIG_PITCH_ANGLE_MAX       30.0f   // 展开最大角度(度)
-#define BIG_PITCH_ANGLE_MIN     -60.0f   // 折叠最大角度(度)
-
+#define BIG_PITCH_ANGLE_MAX       (BIG_PITCH_STRETCH_ANGLE - 22.0f)   // 展开限位
+#define BIG_PITCH_ANGLE_MIN       (BIG_PITCH_FOLD_ANGLE + 8.0f)   // 折叠限位
+#define BIG_PITCH_FOLD_ANGLE      -48.0f   // 折叠角度
+#define BIG_PITCH_STRETCH_ANGLE   45.0f   // 展开角度
 // ============== 小Pitch MF6015 编码器配置 ==============
 #define MF6015_ENC_RESOLUTION     65535   // 16位编码器，满量程
 #define MF6015_ENC_TO_DEGREE     (360.0f / MF6015_ENC_RESOLUTION)  // 编码器角度转度数系数

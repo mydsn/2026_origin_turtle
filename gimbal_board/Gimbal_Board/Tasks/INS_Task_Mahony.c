@@ -219,10 +219,10 @@ void INS_Task(void const *pvParameters)
 
     imu_start_dma_flag = 1;
 
-    bmi088_offset_data.gyro[0] = 0.00020520f;
-    bmi088_offset_data.gyro[1] = 0.003640f;
-    bmi088_offset_data.gyro[2] = 0.002905f;
-    //    mpu_offset_clc();
+    bmi088_offset_data.gyro[0] = 0.00198763353f;
+    bmi088_offset_data.gyro[1] = -0.00594130903f;
+    bmi088_offset_data.gyro[2] = 0.00116845325f;
+//        mpu_offset_clc();
 
     // 标记是否是第一次进入while(1)循环
     static uint8_t first_loop_done = 0;

@@ -13,7 +13,8 @@
 
 // 量纲转换参数
 #define PI 3.141592f
-#define M_PER_SEC_TO_RPM 2183.6f // m/s转rpm(注意，与麦轮半径和轮电机减速比有关)
+#define SQRT2 1.4142135f
+#define M_PER_SEC_TO_RPM 2183.6f // m/s转rpm(注意，与麦轮半径和轮电机减速比有关)公式为 60*MOTOR_REDUCTION_RATIO/（2*pi*WHEEL_RADIUS)
 #define DEGREE_TO_RAD 0.0172532f //  pi/180
 #define RAD_TO_DEGREE 57.295779f
 #define DM6006_ENC_TO_DEGREE 0.021972f //  360/16384
@@ -24,10 +25,10 @@
 #define MOTOR_DISTANCE_LENGTH 0.41f // 底盘较长的轮距
 #define WHEEL_RADIUS 0.06f  //轮半径
 #define MOTOR_REDUCTION_RATIO 13.72f  // 轮电机减速比
-#define CHASSIS_FOLLOW_GIMBAL_BACK_ZERO 178.09967f  //底盘跟随云台时的后零点，单位：度
-#define CHASSIS_FOLLOW_GIMBAL_RIGHT_ZERO 88.09967f // 底盘跟随云台时的右零点
-#define CHASSIS_FOLLOW_GIMBAL_LEFT_ZERO 268.09967f  // 底盘跟随云台时的左零点
-#define CHASSIS_FOLLOW_GIMBAL_ZERO 358.09967f       // 底盘跟随云台时的零点，同时也是小陀螺模式下底盘vx(前进)正方向
+#define CHASSIS_FOLLOW_GIMBAL_BACK_ZERO   142.3512f		//底盘跟随云台时的后零点，单位：度
+#define CHASSIS_FOLLOW_GIMBAL_RIGHT_ZERO	232.3512f 	// 底盘跟随云台时的右零?
+#define CHASSIS_FOLLOW_GIMBAL_LEFT_ZERO   52.3512f	 	// 底盘跟随云台时的左零点?
+#define CHASSIS_FOLLOW_GIMBAL_ZERO				322.3512f   // 底盘跟随云台时的零点，同时也是小陀螺模式下底盘vx(前进)正方向
 
 //小陀螺相关参数
 #define ROTATE_WZ_MAX 12.0  // 小陀螺正向速度,最高速，单位：rad/s
@@ -49,10 +50,10 @@
 #define WHEEL_MOTOR_SPEED_PID_MAX_IOUT 1000.0f
 #define WHEEL_MOTOR_CURRENT_FF 2.0f // 轮电机电流前馈系数
 
-#define CHASSIS_FOLLOW_GIMBAL_PID_KP 90.0f
+#define CHASSIS_FOLLOW_GIMBAL_PID_KP 280.0f//90.0f
 #define CHASSIS_FOLLOW_GIMBAL_PID_KI 0.0005f
-#define CHASSIS_FOLLOW_GIMBAL_PID_KD 80.0f
-#define CHASSIS_FOLLOW_GIMBAL_PID_MAX_OUT 6500.0f //20000.0f
+#define CHASSIS_FOLLOW_GIMBAL_PID_KD 180.0f//80.0f
+#define CHASSIS_FOLLOW_GIMBAL_PID_MAX_OUT 20000.0f
 #define CHASSIS_FOLLOW_GIMBAL_PID_MAX_IOUT 450.0f
 
 #define BUFFER_ENERGY_PID_KP 2.5f
@@ -80,10 +81,10 @@ extern nav_ctrl_t nav_ctrl;
 /************************全向轮麦轮布局索引***************************/
 typedef enum
 {
-    WHEEL_MOTOR_FR = 0, // 右前
-    WHEEL_MOTOR_FL = 1, // 左前
-    WHEEL_MOTOR_BL = 2, // 左后
-    WHEEL_MOTOR_BR = 3  // 右后
+    WHEEL_MOTOR_BL = 0, // 左后
+    WHEEL_MOTOR_BR = 1, // 右后
+    WHEEL_MOTOR_FR = 2, // 右前
+    WHEEL_MOTOR_FL = 3  // 左前
 } wheel_motor_index_t;
 
 void Chassis_Task(void const *argument);

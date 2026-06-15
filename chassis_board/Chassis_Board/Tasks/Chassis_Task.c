@@ -173,7 +173,7 @@ static void Chassis_Data_Update(void)
  */
 static void Chassis_Mode_Update(chassis_mode_t *mode)
 {
-	bool_t rc_ctrl_follow_gimbal = ((chassis_rc_ctrl.s[1] == RC_SW_MID) && (chassis_rc_ctrl.ch[4] < 500) && (chassis_rc_ctrl.ch[4] > -500)); // 是否满足遥控器控制时底盘跟随云台模式，下面以此类推
+	bool_t rc_ctrl_follow_gimbal = ((chassis_rc_ctrl.s[1] == RC_SW_MID) && (chassis_rc_ctrl.ch[4] < 2000 /*500*/) && (chassis_rc_ctrl.ch[4] > -2000 /*-500*/)); // 是否满足遥控器控制时底盘跟随云台模式，下面以此类推
 	bool_t rc_ctrl_rotate = ((chassis_rc_ctrl.s[1] == RC_SW_MID) && !rc_ctrl_follow_gimbal);
 	bool_t rc_ctrl_safe = ((chassis_rc_ctrl.s[1] == RC_SW_DOWN) || toe_is_error(RC_TOE)) || toe_is_error(WHEEL_MOTOR_1_TOE) || toe_is_error(WHEEL_MOTOR_2_TOE) || toe_is_error(WHEEL_MOTOR_3_TOE) || toe_is_error(WHEEL_MOTOR_4_TOE);
 	bool_t nav_follow_gimbal = (chassis_rc_ctrl.s[1] == RC_SW_UP) && (nav_ctrl.chassis_target_mode == NAV_CHASSIS_FOLLOW_GIMBAL);			   // 是否满足导航模式下底盘跟随云台模式，下面以此类推
@@ -366,8 +366,8 @@ static void Set_Chassis_VxVy(fp32 yaw_chassis_zero_rad, fp32 *chassis_vx, fp32 *
 			gimbal_vy = 0;
 		}
 	}
-	*chassis_vx = cos_yaw * gimbal_vx + sin_yaw * gimbal_vy;
-	*chassis_vy = sin_yaw * gimbal_vx - cos_yaw * gimbal_vy;
+	*chassis_vx = cos_yaw * gimbal_vx - sin_yaw * gimbal_vy;
+	*chassis_vy = sin_yaw * gimbal_vx + cos_yaw * gimbal_vy;
 }
 
 /**
@@ -487,8 +487,8 @@ static void chassis_follow_gimbal_handler(void)
 		chassis_follow_gimbal_zero_actual = Find_Chassis_Follow_Gimbal_ZERO(DM_big_yaw_motor.pos);
 	}
 
-	chassis_control.chassis_follow_gimbal_angle = Limit_To_180(chassis_follow_gimbal_zero_actual - DM_big_yaw_motor.pos); // 用于设置底盘跟随大yaw的角速度
-	chassis_control.chassis_gimbal_angle_rad = Limit_To_180(CHASSIS_FOLLOW_GIMBAL_ZERO - DM_big_yaw_motor.pos) * DEGREE_TO_RAD;
+	chassis_control.chassis_follow_gimbal_angle = Limit_To_180(DM_big_yaw_motor.pos - chassis_follow_gimbal_zero_actual); // 用于设置底盘跟随大yaw的角速度
+	chassis_control.chassis_gimbal_angle_rad = Limit_To_180(DM_big_yaw_motor.pos - CHASSIS_FOLLOW_GIMBAL_ZERO) * DEGREE_TO_RAD;
 
 	Set_Chassis_VxVy(chassis_control.chassis_gimbal_angle_rad, &chassis_target_speed.vx, &chassis_target_speed.vy);
 	Set_FollowGimbal_Wz(chassis_control.chassis_follow_gimbal_angle, &chassis_target_speed.wz);
@@ -500,7 +500,7 @@ static void chassis_follow_gimbal_handler(void)
 static void chassis_rotate_handler(void)
 {
 	fp32 rotate_ff = chassis_target_speed.wz > 13000 ? ROTATE_MOVE_FF_HIGH_SPEED : ROTATE_MOVE_FF_LOW_SPEED;
-	chassis_control.chassis_follow_gimbal_angle = Limit_To_180(CHASSIS_FOLLOW_GIMBAL_ZERO - DM_big_yaw_motor.pos + rotate_ff * chassis_control.current_wz);
+	chassis_control.chassis_follow_gimbal_angle = Limit_To_180(DM_big_yaw_motor.pos - CHASSIS_FOLLOW_GIMBAL_ZERO + rotate_ff * chassis_control.current_wz);
 	chassis_control.chassis_gimbal_angle_rad = chassis_control.chassis_follow_gimbal_angle * DEGREE_TO_RAD; // 小陀螺模式下默认零点（即底盘坐标系x轴正方向）距离yaw轴的弧度差
 
 	Set_Chassis_VxVy(chassis_control.chassis_gimbal_angle_rad, &chassis_target_speed.vx, &chassis_target_speed.vy);
@@ -543,10 +543,10 @@ static void Call_Chassis_Mode_Handler(chassis_mode_t mode)
 static void Chassis_Vector_To_Omni_Speed(const fp32 vx_set, const fp32 vy_set, const fp32 wz_set)
 {
 	fp32 wheel_speed[4];
-	wheel_speed[WHEEL_MOTOR_FR] = (vx_set + vy_set) + MOTOR_DISTANCE_TO_CENTER * wz_set;
-	wheel_speed[WHEEL_MOTOR_FL] = (vx_set - vy_set) + MOTOR_DISTANCE_TO_CENTER * wz_set;
-	wheel_speed[WHEEL_MOTOR_BR] = (-vx_set + vy_set) + MOTOR_DISTANCE_TO_CENTER * wz_set;
-	wheel_speed[WHEEL_MOTOR_BL] = (-vx_set - vy_set) + MOTOR_DISTANCE_TO_CENTER * wz_set;
+	wheel_speed[WHEEL_MOTOR_FR] = (vx_set + vy_set) / SQRT2 + MOTOR_DISTANCE_TO_CENTER * wz_set;
+	wheel_speed[WHEEL_MOTOR_FL] = (-vx_set + vy_set) / SQRT2 + MOTOR_DISTANCE_TO_CENTER * wz_set;
+	wheel_speed[WHEEL_MOTOR_BR] = (vx_set - vy_set) / SQRT2 + MOTOR_DISTANCE_TO_CENTER * wz_set;
+	wheel_speed[WHEEL_MOTOR_BL] = (-vx_set - vy_set) / SQRT2 + MOTOR_DISTANCE_TO_CENTER * wz_set;
 
 	for (uint8_t i = 0; i < 4; i++)
 	{
@@ -590,7 +590,7 @@ void Chassis_Task(void const *argument)
 
 		Allocate_Can_Msg(chassis_wheel_motor[0].give_current, chassis_wheel_motor[1].give_current,
 		                 chassis_wheel_motor[2].give_current, chassis_wheel_motor[3].give_current, CAN_WHEEL_M3508_CMD);
-
+		Vofa_Send_Data4(chassis_wheel_motor[0].give_current, chassis_wheel_motor[0].speed_set, chassis_wheel_motor[2].speed_now, 0);
 		vTaskDelay(2);
 	}
 }
