@@ -89,6 +89,8 @@ typedef struct // 云台小yaw轴，pitch轴的6020结构体
     fp32 ENC_angle_set;
     fp32 ENC_angle_now;
     fp32 ENC_angle_set_last;
+    
+    fp32 INS_speed_last; // 用于滤波
 
     fp32 angle_err_speed_ff;     // 速度前馈项(基于目标角度的差分)
     fp32 autoaim_mpc_speed_ff;   // 速度前馈（基于自瞄mpc)

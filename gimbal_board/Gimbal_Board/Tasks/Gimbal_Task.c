@@ -199,7 +199,7 @@ static void Gimbal_Data_Update(void)
     gimbal_small_yaw_motor.INS_speed_set_last = gimbal_small_yaw_motor.INS_speed_set;
 
 //    gimbal_small_yaw_motor.INS_speed_now =  (-arm_sin_f32(imu.pitch * DEGREE_TO_RAD) * imu.gyro[AXIS_X] + arm_cos_f32(imu.pitch * DEGREE_TO_RAD) * imu.gyro[AXIS_Z])* RAD_TO_DEGREE; // 单位度每秒，做了俯仰速度偏差处理
-    gimbal_small_yaw_motor.INS_speed_now = imu.gyro[AXIS_Z] * RAD_TO_DEGREE; // 单位度每秒，做了俯仰速度偏差处理
+    gimbal_small_yaw_motor.INS_speed_now = (imu.gyro[AXIS_Z] * RAD_TO_DEGREE) * 0.5f + gimbal_small_yaw_motor.INS_speed_last * 0.5f; // 单位度每秒，做了俯仰速度偏差处理
     gimbal_small_yaw_motor.INS_angle_now = imu.yaw;
 
     // 处理小yaw电机位置编码器值的跳变问题
@@ -242,6 +242,7 @@ static void Gimbal_Data_Update(void)
     DM_big_pitch_motor.INS_speed_now = DM_big_pitch_motor.vel * RAD_TO_DEGREE;
 
     gimbal_control.gimbal_mode_last = gimbal_control.gimbal_mode;
+    gimbal_small_yaw_motor.INS_speed_last = gimbal_small_yaw_motor.INS_speed_now;
 
 }
 
@@ -850,28 +851,29 @@ static void gimbal_remote_control_handler(void)
     }
     /*********大yaw轴电机控制逻辑********/
     
-    if (gimbal_control.small_yaw_mode == SPEED)
-    {
-        DM_big_yaw_motor.INS_speed_set = -(float)rc_ctrl.rc.ch[0] / 660.0f * REMOTE_CONTROL_YAW_MAX_SPEED * RAD_TO_DEGREE;
-        Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.speed_pid, SPEED, BIG_YAW_MOTOR, DM_big_yaw_motor.INS_speed_now, DM_big_yaw_motor.INS_speed_set);
-    }
-    else if (gimbal_control.small_yaw_mode == POSITION_INS)
-    {
-        if (small_yaw_mode_last == SPEED || gimbal_control.gimbal_mode_last != GIMBAL_REMOTE_CONTROL)
-        {
-            DM_big_yaw_motor.INS_angle_set = DM_big_yaw_motor.INS_angle_now;
-        }
-        DM_big_yaw_motor.INS_angle_set = Find_Yaw_Min_Angle(DM_big_yaw_motor.INS_angle_set, DM_big_yaw_motor.INS_angle_now);
-        Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.follow_small_yaw_pid, POSITION_INS, BIG_YAW_MOTOR, DM_big_yaw_motor.INS_angle_now, DM_big_yaw_motor.INS_angle_set);
-    }
+//    if (gimbal_control.small_yaw_mode == SPEED)
+//    {
+//        DM_big_yaw_motor.INS_speed_set = -(float)rc_ctrl.rc.ch[0] / 660.0f * REMOTE_CONTROL_YAW_MAX_SPEED * RAD_TO_DEGREE;
+//        Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.speed_pid, SPEED, BIG_YAW_MOTOR, DM_big_yaw_motor.INS_speed_now, DM_big_yaw_motor.INS_speed_set);
+//    }
+//    else if (gimbal_control.small_yaw_mode == POSITION_INS)
+//    {
+//        if (small_yaw_mode_last == SPEED || gimbal_control.gimbal_mode_last != GIMBAL_REMOTE_CONTROL)
+//        {
+//            DM_big_yaw_motor.INS_angle_set = DM_big_yaw_motor.INS_angle_now;
+//        }
+//        DM_big_yaw_motor.INS_angle_set = Find_Yaw_Min_Angle(DM_big_yaw_motor.INS_angle_set, DM_big_yaw_motor.INS_angle_now);
+//        Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.follow_small_yaw_pid, POSITION_INS, BIG_YAW_MOTOR, DM_big_yaw_motor.INS_angle_now, DM_big_yaw_motor.INS_angle_set);
+//    }
 
-    //fp32 big_yaw_follow_angle = (SMALL_YAW_MIDDLE_ENC_ZERO * GM6020_ENC_TO_DEGREE - gimbal_small_yaw_motor.ENC_angle_now);
-    //Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.follow_small_yaw_pid, POSITION_ENC, BIG_YAW_MOTOR, big_yaw_follow_angle, 0);
+    // 大Yaw跟随
+    fp32 big_yaw_follow_angle = (SMALL_YAW_MIDDLE_ENC_ZERO * GM6020_ENC_TO_DEGREE - gimbal_small_yaw_motor.ENC_angle_now);
+    Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.follow_small_yaw_pid, POSITION_ENC, BIG_YAW_MOTOR, big_yaw_follow_angle, 0);
 
     
 //    // debug
 //   fp32 big_yaw_follow_angle = DM_big_yaw_motor.INS_angle_now;
-////    Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.follow_small_yaw_pid, POSITION_ENC, BIG_YAW_MOTOR, big_yaw_follow_angle, DM_big_yaw_motor.INS_angle_set);
+//    Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.follow_small_yaw_pid, POSITION_ENC, BIG_YAW_MOTOR, big_yaw_follow_angle, DM_big_yaw_motor.INS_angle_set);
 //   Calculate_Gimbal_Motor_Target_Current(&DM_big_yaw_motor.follow_small_yaw_pid, POSITION_ENC, BIG_YAW_MOTOR, big_yaw_follow_angle, 0.0);
 
 //      fp32 big_yaw_follow_angle = SMALL_YAW_MIDDLE_ENC_ZERO * GM6020_ENC_TO_DEGREE - gimbal_small_yaw_motor.ENC_angle_now;
@@ -937,12 +939,12 @@ void Gimbal_Task(void const *argument)
             Ctrl_DM_BigPitch(0.0f, 0.0f, 0.0f, 0.0f, DM_big_pitch_motor.target_current);
         }
         Ctrl_DM_Motor(0, 0, 0, 0, DM_big_yaw_motor.target_current);//-gimbal_small_yaw_motor.give_current
-        Allocate_Can_Msg(0, 0, 0, 0, CAN_SMALL_YAW_CMD); //CMD名字先不改了，反馈方向反一下
+        Allocate_Can_Msg(-gimbal_small_yaw_motor.give_current, 0, 0, 0, CAN_SMALL_YAW_CMD); //CMD名字先不改了，反馈方向反一下
         vTaskDelay(1);
         Allocate_Can_Msg(0, 0, 0, 0, CAN_SMALL_PITCH_CMD);
         //Allocate_Can_Msg(LK_MOTOR_TORQUE_CONTROL_CMD_ID, 0, gimbal_small_yaw_motor.give_current, 0, CAN_SMALL_PITCH_CMD);
 
-        //Vofa_Send_Data4(gimbal_small_yaw_motor.INS_speed_set, gimbal_small_yaw_motor.INS_speed_now, 0, 0);
+        //Vofa_Send_Data4(gimbal_small_yaw_motor.INS_speed_set, gimbal_small_yaw_motor.INS_speed_now, gimbal_small_yaw_motor.INS_angle_set, gimbal_small_yaw_motor.INS_angle_now);
         //Vofa_Send_Data4(DM_big_yaw_motor.INS_angle_set, DM_big_yaw_motor.INS_angle_now, DM_big_yaw_motor.INS_speed_set, DM_big_yaw_motor.INS_speed_now);
         //Vofa_Send_Data4(DM_big_yaw_motor.target_current, DM_big_yaw_motor.toq, DM_big_yaw_motor.INS_speed_set, DM_big_yaw_motor.INS_speed_now);
         cnt == 120 ? cnt = 1 : cnt++; // div等于2,3,4,5的最小公倍数时重置
